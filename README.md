@@ -6,7 +6,7 @@ This can be used in GitLab CI to help you stick to GitFlow.
 
 ```yaml
 include:
-  - https://github.com/ekreative/gitflow/gitflow.yml
+  - https://raw.githubusercontent.com/ekreative/gitflow/master/gitflow.yml
 ```
 
 The include expects to run in a stages `pre_build` and `pre_deploy`, you can customise this,
