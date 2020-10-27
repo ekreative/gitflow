@@ -1,0 +1,21 @@
+gitflow:
+  image: ekreative/gitflow:1
+  stage: pre_build
+  except:
+    - tags
+  dependencies: []
+  interruptible: true
+  script:
+    - gitflow check_mr
+  artifacts:
+    paths:
+      - app_release
+
+gitflow_release:
+  image: ekreative/gitflow:1
+  stage: pre_deploy
+  only:
+    - master
+  dependencies: []
+  script:
+    - gitflow release

@@ -1,0 +1,198 @@
+#!/usr/bin/env sh
+set -e
+
+gitflow() {
+  action="${1:-"check_mr"}"
+  echo "Starting $action" >&2
+
+  case "$action" in
+  "check_mr")
+    check_mr
+    ;;
+  "release")
+    release
+    ;;
+  "app_release")
+    app_release
+    ;;
+  *)
+    echo "Error: Unknown action=$action" >&2
+    exit 1
+    ;;
+  esac
+}
+
+configure() {
+  GIT_FLOW_MASTER="${GIT_FLOW_MASTER:-"master"}"
+  GIT_FLOW_TEST="${GIT_FLOW_TEST:-""}"
+  GIT_FLOW_DEV="${GIT_FLOW_DEV:-"dev"}"
+  GIT_FLOW_HOTFIX="${GIT_FLOW_HOTFIX:-"hotfix/"}"
+
+  echo "GIT_FLOW_MASTER=$GIT_FLOW_MASTER" >&2
+  if [ -n "$GIT_FLOW_TEST" ]; then
+    echo "GIT_FLOW_TEST=$GIT_FLOW_TEST" >&2
+
+    GIT_FLOW_DEV_FORWARD="$GIT_FLOW_TEST"
+    GIT_FLOW_MASTER_BACKWARD="$GIT_FLOW_TEST"
+  else
+    GIT_FLOW_DEV_FORWARD="$GIT_FLOW_MASTER"
+    GIT_FLOW_MASTER_BACKWARD="$GIT_FLOW_DEV"
+  fi
+  echo "GIT_FLOW_DEV=$GIT_FLOW_DEV" >&2
+
+  if [ "$GIT_STRATEGY" = "none" ]; then
+    echo 'Error: check_diff requires git target be checked out but GIT_STRATEGY=none.' >&2
+    exit 1
+  fi
+
+  GIT_FLOW_REF_NAME="${GIT_FLOW_REF_NAME:-"$CI_COMMIT_REF_NAME"}"
+  echo "GIT_FLOW_REF_NAME=$GIT_FLOW_REF_NAME" >&2
+  if [ -z "$GIT_FLOW_REF_NAME" ]; then
+    echo "Error: GIT_FLOW_REF_NAME must be set" >&2
+    exit 1
+  fi
+
+  GIT_FLOW_REF_SLUG="${GIT_FLOW_REF_SLUG:-"$CI_COMMIT_REF_SLUG"}"
+  echo "GIT_FLOW_REF_SLUG=$GIT_FLOW_REF_SLUG" >&2
+  if [ -z "$GIT_FLOW_REF_SLUG" ]; then
+    echo "Error: GIT_FLOW_REF_SLUG must be set" >&2
+    exit 1
+  fi
+
+  GIT_FLOW_COMMIT_SHA="${GIT_FLOW_COMMIT_SHA:-"$CI_COMMIT_SHA"}"
+  echo "GIT_FLOW_COMMIT_SHA=$GIT_FLOW_COMMIT_SHA" >&2
+  if [ -z "$GIT_FLOW_COMMIT_SHA" ]; then
+    echo "Error: GIT_FLOW_COMMIT_SHA must be set" >&2
+    exit 1
+  fi
+
+  GIT_FLOW_RELEASE_ID="${GIT_FLOW_RELEASE_ID:-"$CI_PIPELINE_ID"}"
+  echo "GIT_FLOW_RELEASE_ID=$GIT_FLOW_RELEASE_ID" >&2
+  if [ -z "$GIT_FLOW_RELEASE_ID" ]; then
+    echo "Error: GIT_FLOW_RELEASE_ID must be set" >&2
+    exit 1
+  fi
+
+  if [ -z "$APP_RELEASE" ]; then
+    if [ "$GIT_FLOW_REF_NAME" = "$GIT_FLOW_MASTER" ]; then
+      git_show=$(git show -s --format=%ci "$GIT_FLOW_COMMIT_SHA")
+      APP_RELEASE="$(echo "$git_show" | sed 's/^\([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\).*/\1/')-${GIT_FLOW_RELEASE_ID}"
+    else
+      APP_RELEASE="${GIT_FLOW_REF_SLUG}-${GIT_FLOW_RELEASE_ID}"
+    fi
+  fi
+  echo "APP_RELEASE=$APP_RELEASE" >&2
+}
+
+configure_gitlab() {
+  if [ -z "$GITLAB_API_TOKEN" ]; then
+    echo "Error: GITLAB_API_TOKEN must be set" >&2
+    exit 1
+  fi
+  echo "GITLAB_API_TOKEN=$(echo "$GITLAB_API_TOKEN" | cut -c -3)..." >&2
+
+  if [ -z "$CI_API_V4_URL" ]; then
+    echo "Error: CI_API_V4_URL must be set" >&2
+    exit 1
+  fi
+
+  if [ -z "$CI_PROJECT_ID" ]; then
+    echo "Error: CI_PROJECT_ID must be set" >&2
+    exit 1
+  fi
+}
+
+check_mr() {
+  configure
+  configure_gitlab
+
+  case "$GIT_FLOW_REF_NAME" in
+  "$GIT_FLOW_DEV")
+    mr_forward "$GIT_FLOW_DEV" "$GIT_FLOW_DEV_FORWARD"
+    ;;
+  "$GIT_FLOW_TEST")
+    mr_forward "$GIT_FLOW_TEST" "$GIT_FLOW_MASTER"
+    mr_backward "$GIT_FLOW_TEST" "$GIT_FLOW_DEV"
+    ;;
+  "$GIT_FLOW_MASTER")
+    mr_backward "$GIT_FLOW_MASTER" "$GIT_FLOW_MASTER_BACKWARD"
+    ;;
+  "$GIT_FLOW_HOTFIX"*)
+    mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $GIT_FLOW_REF_NAME"
+    ;;
+  *)
+    mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $GIT_FLOW_REF_NAME"
+    ;;
+  esac
+}
+
+# Create MR going forward
+mr_forward() {
+  source="$1"
+  target="$2"
+  title="${3:-"Draft: $source release into $target"}"
+
+  create_mr "$source" "$target" "$title"
+}
+
+# For backward we only create MRs when there is a difference
+mr_backward() {
+  source="$1"
+  target="$2"
+
+  if check_diff "$source" "$target"; then
+    echo "There is a difference from $source to $target"
+    create_mr "$source" "$target" "Draft: $source back into $target"
+  else
+    echo "No changes from $source to $target, skipping MR" >&2
+  fi
+}
+
+# Check if there are files different from one branch to another
+check_diff() {
+  source="$1"
+  target="$2"
+
+  git diff --quiet "$source...$target"
+  diff="$?"
+  # When the result is not 1 or 0, some other git error happened
+  if [ "$diff" = "1" ] || [ "$diff" = "0" ]; then
+    [ "$diff" = "1" ] #Invert the result
+    return "$?"
+  fi
+  exit "$diff"
+}
+
+# Create an MR on GitLab
+create_mr() {
+  source="$1"
+  target="$2"
+  title="$3"
+
+  echo "Checking for MR $source into $target" >&2
+  mrs_response=$(curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests?state=opened&source_branch=$source&target_branch=$target")
+
+  if [ "$(echo "$mrs_response" | jq -r '. | length')" = "0" ]; then
+    echo "Creating MR" >&2
+    curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" -X POST -d "source_branch=$source" -d "target_branch=$target" -d "title=$title" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests"
+  else
+    echo "MR exists" >&2
+  fi
+}
+
+# Create a release tag
+release() {
+  configure
+  configure_gitlab
+
+  echo "Creating release $APP_RELEASE from $GIT_FLOW_COMMIT_SHA" >&2
+  curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" -X POST -d "tag_name=$APP_RELEASE" -d "ref=$GIT_FLOW_COMMIT_SHA" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
+}
+
+app_release() {
+  configure
+
+  echo "$APP_RELEASE"
+}
+
+gitflow "$1"

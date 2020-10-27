@@ -1,0 +1,13 @@
+language: shell
+dist: focal
+
+env:
+  - HADOLINT: "${HOME}/hadolint"
+
+install:
+  - curl -sL -o "$HADOLINT" "https://github.com/hadolint/hadolint/releases/download/v1.17.6/hadolint-$(uname -s)-$(uname -m)" && chmod +x "$HADOLINT"
+
+script:
+  - shfmt -d -i 2 gitflow
+  - shellcheck gitflow
+  - $HADOLINT Dockerfile
