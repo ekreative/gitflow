@@ -140,7 +140,7 @@ mr_backward() {
   source="$1"
   target="$2"
 
-  if check_diff "$source" "$target"; then
+  if check_diff_gitlab "$source" "$target"; then
     echo "There is a difference from $source to $target"
     create_mr "$source" "$target" "Draft: $source back into $target"
   else
@@ -149,6 +149,9 @@ mr_backward() {
 }
 
 # Check if there are files different from one branch to another
+# This one fails because the origin/target branch doesnt exist local
+# And I think easier to use the gitlab api than mess around with pulling remote
+# Not used right now
 check_diff() {
   source="$1"
   target="$2"
@@ -161,6 +164,16 @@ check_diff() {
     return "$?"
   fi
   exit "$diff"
+}
+
+# Check if there are files different from one branch to another
+check_diff_gitlab() {
+  source="$1"
+  target="$2"
+
+  echo "Checking for diffs from $source into $target" >&2
+  diff_response=$(curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/compare?from=$source&to=$target")
+  [ "$(echo "$diff_response" | jq -r '.diffs | length')" -gt "0" ]
 }
 
 # Create an MR on GitLab
