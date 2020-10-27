@@ -153,7 +153,7 @@ check_diff() {
   source="$1"
   target="$2"
 
-  git diff --quiet "$source...$target"
+  git diff --quiet "origin/$source...origin/$target"
   diff="$?"
   # When the result is not 1 or 0, some other git error happened
   if [ "$diff" = "1" ] || [ "$diff" = "0" ]; then
