@@ -199,7 +199,16 @@ release() {
   configure_gitlab
 
   echo "Creating release $APP_RELEASE from $GIT_FLOW_COMMIT_SHA" >&2
-  curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" -X POST -d "tag_name=$APP_RELEASE" -d "ref=$GIT_FLOW_COMMIT_SHA" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
+  result=$(curl -sS \
+    -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
+    -X POST \
+    -d "tag_name=$APP_RELEASE" \
+    -d "ref=$GIT_FLOW_COMMIT_SHA" \
+    "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" \
+    -o /dev/stderr \
+    -w "%{http_code}")
+  echo "Created release status code: $result" >&2
+  [ "$result" = "201" ] || [ "$result" = "409" ]
 }
 
 app_release() {
