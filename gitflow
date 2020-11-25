@@ -172,7 +172,7 @@ check_diff_gitlab() {
   target="$2"
 
   echo "Checking for diffs from $source into $target" >&2
-  diff_response=$(curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/compare?from=$source&to=$target")
+  diff_response=$(curl -fsS -H "PRIVATE-TOKEN: $GITLAB_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/compare?from=$target&to=$source")
   [ "$(echo "$diff_response" | jq -r '.diffs | length')" -gt "0" ]
 }
 
