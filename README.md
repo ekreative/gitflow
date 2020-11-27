@@ -48,3 +48,5 @@ GIT_FLOW_HOTFIX=hotfix/
 
 Additionally you can add a `test` branch between `dev` and `master`
 by setting `GIT_FLOW_TEST=test`.
+
+You can enable auto create merge request for all branches by setting `GIT_FLOW_AUTO_MR=1`.

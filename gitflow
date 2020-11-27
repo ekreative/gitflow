@@ -27,6 +27,7 @@ configure() {
   GIT_FLOW_TEST="${GIT_FLOW_TEST:-""}"
   GIT_FLOW_DEV="${GIT_FLOW_DEV:-"dev"}"
   GIT_FLOW_HOTFIX="${GIT_FLOW_HOTFIX:-"hotfix/"}"
+  GIT_FLOW_AUTO_MR="${GIT_FLOW_AUTO_MR:-""}"
 
   echo "GIT_FLOW_MASTER=$GIT_FLOW_MASTER" >&2
   if [ -n "$GIT_FLOW_TEST" ]; then
@@ -118,10 +119,14 @@ check_mr() {
     mr_backward "$GIT_FLOW_MASTER" "$GIT_FLOW_MASTER_BACKWARD"
     ;;
   "$GIT_FLOW_HOTFIX"*)
-    mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $GIT_FLOW_REF_NAME"
+    if [ -n "$GIT_FLOW_AUTO_MR" ]; then
+      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $GIT_FLOW_REF_NAME"
+    fi
     ;;
   *)
-    mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $GIT_FLOW_REF_NAME"
+    if [ -n "$GIT_FLOW_AUTO_MR" ]; then
+      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $GIT_FLOW_REF_NAME"
+    fi
     ;;
   esac
 }
