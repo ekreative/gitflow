@@ -1,5 +1,5 @@
 gitflow:
-  image: ekreative/gitflow:2
+  image: ekreative/gitflow:3
   stage: pre_build
   except:
     - tags
@@ -13,7 +13,7 @@ gitflow:
       - app_release
 
 gitflow_release:
-  image: ekreative/gitflow:2
+  image: ekreative/gitflow:3
   stage: pre_deploy
   only:
     - master
