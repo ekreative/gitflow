@@ -120,12 +120,12 @@ check_mr() {
     ;;
   "$GIT_FLOW_HOTFIX"*)
     if [ -n "$GIT_FLOW_AUTO_MR" ]; then
-      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $GIT_FLOW_REF_NAME"
+      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
     fi
     ;;
   *)
     if [ -n "$GIT_FLOW_AUTO_MR" ]; then
-      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $GIT_FLOW_REF_NAME"
+      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
     fi
     ;;
   esac
@@ -135,7 +135,7 @@ check_mr() {
 mr_forward() {
   source="$1"
   target="$2"
-  title="${3:-"Draft: $source release into $target"}"
+  title="${3:-"Draft: $(capitalize "$source") into $(capitalize "$target")"}"
 
   create_mr "$source" "$target" "$title"
 }
@@ -147,10 +147,14 @@ mr_backward() {
 
   if check_diff_gitlab "$source" "$target"; then
     echo "There is a difference from $source to $target"
-    create_mr "$source" "$target" "Draft: $source back into $target"
+    create_mr "$source" "$target" "Draft: $(capitalize "$source") back into $(capitalize "$target")"
   else
     echo "No changes from $source to $target, skipping MR" >&2
   fi
+}
+
+capitalize() {
+  echo "$1" | awk '{print toupper(substr($0,0,1))substr($0,2)}'
 }
 
 # Check if there are files different from one branch to another
