@@ -14,5 +14,6 @@ gitflow_release:
   rules:
     - if: "$DEPLOY"
   needs: []
+  interruptible: false
   script:
     - gitflow release

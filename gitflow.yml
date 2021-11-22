@@ -18,5 +18,6 @@ gitflow_release:
   only:
     - master
   dependencies: []
+  interruptible: false
   script:
     - gitflow release
