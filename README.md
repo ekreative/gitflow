@@ -20,6 +20,21 @@ gitflow:
 You need to add `GITLAB_API_TOKEN` to CI variables,
 with an access token with API access.
 
+## Add to stageless CI YAML
+
+When using the stageless version you will need to override the `needs` of the `gitflow_release` stage
+so that it happens at the right point in your flow.
+
+You can also use `gitflow` as a `needs` when you need the `app_release` artifact.
+
+```yaml
+include:
+  - https://raw.githubusercontent.com/ekreative/gitflow/master/gitflow-stageless.yml
+
+gitflow_release:
+  needs: []
+```
+
 ## Flow
 
 By default, it will use a flow with 2 main branches

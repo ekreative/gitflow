@@ -1,0 +1,18 @@
+gitflow:
+  image: ekreative/gitflow:3
+  needs: []
+  interruptible: true
+  script:
+    - gitflow check_mr
+    - gitflow app_release > app_release
+  artifacts:
+    paths:
+      - app_release
+
+gitflow_release:
+  image: ekreative/gitflow:3
+  rules:
+    - if: "$DEPLOY"
+  needs: []
+  script:
+    - gitflow release
