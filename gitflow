@@ -6,19 +6,19 @@ gitflow() {
   echo "Starting $action" >&2
 
   case "$action" in
-  "check_mr")
-    check_mr
-    ;;
-  "release")
-    release
-    ;;
-  "app_release")
-    app_release
-    ;;
-  *)
-    echo "Error: Unknown action=$action" >&2
-    exit 1
-    ;;
+    "check_mr")
+      check_mr
+      ;;
+    "release")
+      release
+      ;;
+    "app_release")
+      app_release
+      ;;
+    *)
+      echo "Error: Unknown action=$action" >&2
+      exit 1
+      ;;
   esac
 }
 
@@ -109,26 +109,26 @@ check_mr() {
   configure_gitlab
 
   case "$GIT_FLOW_REF_NAME" in
-  "$GIT_FLOW_DEV")
-    mr_forward "$GIT_FLOW_DEV" "$GIT_FLOW_DEV_FORWARD"
-    ;;
-  "$GIT_FLOW_TEST")
-    mr_forward "$GIT_FLOW_TEST" "$GIT_FLOW_MASTER"
-    mr_backward "$GIT_FLOW_TEST" "$GIT_FLOW_DEV"
-    ;;
-  "$GIT_FLOW_MASTER")
-    mr_backward "$GIT_FLOW_MASTER" "$GIT_FLOW_MASTER_BACKWARD"
-    ;;
-  "$GIT_FLOW_HOTFIX"*)
-    if [ -n "$GIT_FLOW_AUTO_MR" ]; then
-      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
-    fi
-    ;;
-  *)
-    if [ -n "$GIT_FLOW_AUTO_MR" ]; then
-      mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
-    fi
-    ;;
+    "$GIT_FLOW_DEV")
+      mr_forward "$GIT_FLOW_DEV" "$GIT_FLOW_DEV_FORWARD"
+      ;;
+    "$GIT_FLOW_TEST")
+      mr_forward "$GIT_FLOW_TEST" "$GIT_FLOW_MASTER"
+      mr_backward "$GIT_FLOW_TEST" "$GIT_FLOW_DEV"
+      ;;
+    "$GIT_FLOW_MASTER")
+      mr_backward "$GIT_FLOW_MASTER" "$GIT_FLOW_MASTER_BACKWARD"
+      ;;
+    "$GIT_FLOW_HOTFIX"*)
+      if [ -n "$GIT_FLOW_AUTO_MR" ]; then
+        mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_MASTER" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
+      fi
+      ;;
+    *)
+      if [ -n "$GIT_FLOW_AUTO_MR" ]; then
+        mr_forward "$GIT_FLOW_REF_NAME" "$GIT_FLOW_DEV" "Draft: $(capitalize "$GIT_FLOW_REF_NAME")"
+      fi
+      ;;
   esac
 }
 
